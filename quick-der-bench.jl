@@ -1,60 +1,55 @@
 include("./quick-der-lib.jl") 
 
-function der_with_solution(a_dim,b_dim,c_dim,r_dim,s_dim,t_dim)
-  r = rand(-10.0:10, (r_dim,b_dim,c_dim))
-  s = rand(-10.0:10, (a_dim,s_dim,c_dim))
-  x = rand(-10.0:10, (a_dim,r_dim))
-  y = rand(-10.0:10, (s_dim,b_dim))
-
-  # t = rand(-10.0:10, (a,b,t_dim))
-
-  z = rand(-10.0:10, (t_dim,c_dim))
-  xr_sy = stack([ -(x*r[:,:,i] + s[:,:,i]* y) for i in 1:c_dim])
-  t = outer_action(xr_sy, z)
-  return r,s,t
+function show_run_timer()
+  show(to)
+  println()
 end
 
-# a_dim=b_dim=c_dim=r_dim=s_dim=t_dim=50
-# r,s,t = der_with_solution(a_dim,b_dim,c_dim,r_dim,s_dim,t_dim)
-# der_solution = solve_dense_der(r,s,t)
-# der_solution = __quickder_NO_GUARDRAILS(r,s,t,a_prime_dim=4,b_prime_dim=4,c_prime_dim=4)
-# der_solution = derivation_solver(r,s,t)
+function der_with_solution(a_dim,b_dim,c_dim,r_dim,s_dim,t_dim)
+  R = rand(-10.0:10, (r_dim,b_dim,c_dim))
+  S = rand(-10.0:10, (a_dim,s_dim,c_dim))
+  X = rand(-10.0:10, (a_dim,r_dim))
+  Y = rand(-10.0:10, (s_dim,b_dim))
 
-# x_soln,y_soln,z_soln = der_solution[1]
-# ans_correct = __answer_check(r,s,t,x_soln,y_soln,z_soln, faster_randomized_check=false)
-# i=5
-# tz = outer_action(t, z_soln)
-# check_on_slice = x_soln*r[:,:,i] + s[:,:,i] * y_soln - tz[:,:,i]
-# show(to)
+  Z = rand(-10.0:10, (t_dim,c_dim))
+  XR_plus_SY = stack([-(X * R[:, :, i] + S[:, :, i] * Y) for i in 1:c_dim])
+  T = outer_action(XR_plus_SY, Z)
+  return R,S,T
+end
 
-function bench_suite()
+function bench()
   slow_solver_sizes = [10,15,20]
   fast_solver_sizes = [10,20,30,50,75,100]
   n_trials = 3
-  slow_results = Dict()
-  fast_results = Dict()
+  slow_results = Dict{Int, Vector{Float64}}()
+  fast_results = Dict{Int, Vector{Float64}}()
   for size in slow_solver_sizes
     @info "slow solver for $size"
-    results = []
-    r,s,t = der_with_solution(size, size, size, size, size, size)
-    for trial in 1:n_trials
-      result = @elapsed solve_dense_der(r,s,t)
+    results = Float64[]
+    R,S,T = der_with_solution(size, size, size, size, size, size)
+    for _ in 1:n_trials
+      TimerOutputs.reset_timer!(to)
+      result = @elapsed solve_dense_derivation_system(R,S,T)
       @info "time: $result"
+      show_run_timer()
       push!(results, result)
     end
     slow_results[size] = results
   end
   for size in fast_solver_sizes
     @info "quick derivation solver for $size"
-    results = []
-    r,s,t = der_with_solution(size, size, size, size, size, size)
-    for trials in 1:n_trials
-      r,s,t = der_with_solution(size, size, size, size, size, size)
-      result = @elapsed derivation_solver(r,s,t)
+    results = Float64[]
+    R,S,T = der_with_solution(size, size, size, size, size, size)
+    for _ in 1:n_trials
+      R,S,T = der_with_solution(size, size, size, size, size, size)
+      TimerOutputs.reset_timer!(to)
+      result = @elapsed derivation_solver(R,S,T; faster_randomized_check=true)
       @info "time: $result"
+      show_run_timer()
       push!(results, result)
     end
     fast_results[size] = results
   end
+  return slow_results, fast_results
 end
-bench_suite()
+bench()
