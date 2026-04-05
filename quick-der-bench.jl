@@ -33,8 +33,7 @@ end
 function bench_derivation(;
   slow_solver_sizes,
   fast_solver_sizes,
-  n_trials,
-  faster_randomized_check)
+  n_trials)
 
   slow_results = Dict{Int, Vector{Float64}}()
   fast_results = Dict{Int, Vector{Float64}}()
@@ -42,8 +41,7 @@ function bench_derivation(;
   for size in slow_solver_sizes
     @info "slow solver for $size"
     R, S, T = der_with_solution(size, size, size, size, size, size)
-    elapsed_seconds = [timed_derivation_run(solve_dense_derivation_system, R, S, T) for _ in 1:n_trials]
-    slow_results[size] = elapsed_seconds
+    slow_results[size] = [timed_derivation_run(solve_dense_derivation_system, R, S, T) for _ in 1:n_trials]
   end
 
   for size in fast_solver_sizes
@@ -51,12 +49,7 @@ function bench_derivation(;
     elapsed_seconds = Float64[]
     for _ in 1:n_trials
       R, S, T = der_with_solution(size, size, size, size, size, size)
-      push!(elapsed_seconds, timed_derivation_run(
-        (R, S, T) -> derivation_solver(R, S, T; faster_randomized_check=faster_randomized_check),
-        R,
-        S,
-        T
-      ))
+      push!(elapsed_seconds, timed_derivation_run(derivation_solver, R, S, T))
     end
     fast_results[size] = elapsed_seconds
   end
@@ -69,7 +62,6 @@ if abspath(PROGRAM_FILE) == @__FILE__
   bench_derivation(
     slow_solver_sizes=[10,15,20],
     fast_solver_sizes=[10,20,30,50,75,100],
-    n_trials=3,
-    faster_randomized_check=true
+    n_trials=2
   )
 end

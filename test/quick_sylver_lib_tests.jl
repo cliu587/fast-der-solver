@@ -14,6 +14,11 @@
         end
     end
 
+    @testset "select_double_restriction_sizes adds one unit of slack on square instances" begin
+        R, S, T, _, _ = sylvester_instance(4; seed=1)
+        @test select_double_restriction_sizes(R, S, T) == (3, 3)
+    end
+
     @testset "sylvester_solver returns valid full solutions on a known solvable instance" begin
         R, S, T, X, Y = sylvester_instance(4; seed=3)
         @test check_sylvester_solution(R, S, T, [(X, Y)]; faster_randomized_check=false)

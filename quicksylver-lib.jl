@@ -100,8 +100,8 @@ function select_double_restriction_sizes(R, S, T)
     quadratic_extension_dim = max(r_dim, s_dim)
     shared_unknown_block_size = ceil(Int, 2.0 * quadratic_extension_dim^2 / c)
 
-    a_prime = min(a, max(1, ceil(Int, shared_unknown_block_size / r_dim)))
-    b_prime = min(b, max(1, ceil(Int, shared_unknown_block_size / s_dim)))
+    a_prime = min(a, max(1, ceil(Int, shared_unknown_block_size / r_dim) + 1))
+    b_prime = min(b, max(1, ceil(Int, shared_unknown_block_size / s_dim) + 1))
 
     num_equations = a_prime * b_prime * c
     num_unknowns = a_prime * r_dim + b_prime * s_dim
