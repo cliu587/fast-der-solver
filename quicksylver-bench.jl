@@ -1,4 +1,5 @@
 include("./quicksylver-lib.jl")
+using Statistics
 
 function show_sylvester_run_timer()
     show(sylver_to)
@@ -48,11 +49,24 @@ function bench_sylvester(;
     return slow_results, fast_results
 end
 
+function print_csv_summary(results)
+    println("n,time")
+    for n in sort(collect(keys(results)))
+        println("$(n),$(mean(results[n]))")
+    end
+end
+
 # Only run benchmark if using directly.
 if abspath(PROGRAM_FILE) == @__FILE__
-    bench_sylvester(
-        slow_sizes=[10, 20, 30, 40, 50, 60, 80, 100],
-        fast_sizes=[10, 20, 40, 60, 80, 100, 150, 200, 250, 300, 350, 400],
-        n_trials=2
+    slow_results, fast_results = bench_sylvester(
+        slow_sizes=[5,10,15,20,23,25],
+        fast_sizes=[10, 20, 40, 60, 80, 100, 150, 200, 250, 300, 350, 400, 500, 600, 700],
+        # slow_sizes=[5],
+        # fast_sizes=[10],
+        n_trials=1
     )
+    println("\nslow solver performance")
+    print_csv_summary(slow_results)
+    println("\nfast solver performance")
+    print_csv_summary(fast_results)
 end

@@ -3,9 +3,9 @@ using Logging
 include("./quick-der-bench.jl")
 include("./quicksylver-bench.jl")
 
-const DERIVATION_SIZES = [10, 16, 25, 40, 63, 100]
-const SYLVESTER_SIZES = [10, 18, 32, 56, 100, 177, 316, 500]
-const N_TRIALS = 2
+const DERIVATION_SIZES = [25, 30, 36, 43, 51, 61, 73, 87, 105, 125]
+const SYLVESTER_SIZES = [200, 230, 264, 304, 349, 401, 461, 530, 609, 700]
+const N_TRIALS = 1
 
 function warm_up()
     R_der, S_der, T_der = der_with_solution(10, 10, 10, 10, 10, 10)

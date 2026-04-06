@@ -1,4 +1,5 @@
 using LinearAlgebra
+using Statistics
 include("./quick-der-lib.jl") 
 
 function show_derivation_run_timer()
@@ -57,11 +58,24 @@ function bench_derivation(;
   return slow_results, fast_results
 end
 
+function print_csv_summary(results)
+  println("n,time")
+  for n in sort(collect(keys(results)))
+    println("$(n),$(mean(results[n]))")
+  end
+end
+
 # Only run benchmark if using directly.
 if abspath(PROGRAM_FILE) == @__FILE__
-  bench_derivation(
-    slow_solver_sizes=[10,15,20],
+  slow_results, fast_results = bench_derivation(
+    slow_solver_sizes=[5,10,15,20,23,25],
     fast_solver_sizes=[10,20,30,50,75,100],
-    n_trials=2
+    # slow_solver_sizes=[5],
+    # fast_solver_sizes=[10],
+    n_trials=1
   )
+  println("\nslow solver performance")
+  print_csv_summary(slow_results)
+  println("\nfast solver performance")
+  print_csv_summary(fast_results)
 end
