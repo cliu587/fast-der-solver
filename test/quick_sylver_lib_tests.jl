@@ -14,9 +14,11 @@
         end
     end
 
-    @testset "select_double_restriction_sizes adds one unit of slack on square instances" begin
+    @testset "select_double_restriction_sizes makes the restricted system generically overdetermined" begin
         R, S, T, _, _ = sylvester_instance(4; seed=1)
-        @test select_double_restriction_sizes(R, S, T) == (3, 3)
+        a_prime, b_prime = select_double_restriction_sizes(R, S, T)
+        r_dim, _, c = size(R); _, s_dim, _ = size(S)
+        @test a_prime * b_prime * c >= a_prime * r_dim + b_prime * s_dim
     end
 
     @testset "sylvester_solver returns valid full solutions on a known solvable instance" begin

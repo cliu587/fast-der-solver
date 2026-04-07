@@ -11,6 +11,39 @@
         @test isapprox(M * nullspace_basis, zeros(2, 2); atol=1e-8, rtol=1e-8)
     end
 
+    @testset "lin_solve returns a particular solution and nullspace basis" begin
+        M = [
+            1.0 0.0 1.0;
+            0.0 1.0 1.0
+        ]
+        rhs = [
+            3.0;
+            4.0
+        ]
+
+        dense_solution = lin_solve(M, rhs)
+        @test !isnothing(dense_solution)
+
+        particular_solution, nullspace_basis = dense_solution
+        @test isapprox(M * particular_solution, rhs; atol=1e-8, rtol=1e-8)
+        @test size(nullspace_basis, 1) == 3
+        @test size(nullspace_basis, 2) == 1
+        @test isapprox(M * nullspace_basis, zeros(2, 1); atol=1e-8, rtol=1e-8)
+    end
+
+    @testset "lin_solve returns nothing when the system is infeasible" begin
+        M = [
+            1.0 0.0;
+            0.0 0.0
+        ]
+        rhs = [
+            0.0;
+            1.0
+        ]
+
+        @test isnothing(lin_solve(M, rhs))
+    end
+
     @testset "linear_equals_affine solves the unique feasible family" begin
         M = [
             1.0 0.0;

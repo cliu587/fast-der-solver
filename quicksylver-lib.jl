@@ -7,7 +7,7 @@ include("./linear-algebra-lib.jl")
 sylver_to = TimerOutput()
 
 function rhs_vector(T)
-    return vcat([vec(T[:, :, k]) for k in axes(T, 3)]...)
+    return vcat((vec(T[:, :, k]) for k in axes(T, 3))...)
 end
 
 function sylvester_system_matrix(R, S)
@@ -17,8 +17,7 @@ function sylvester_system_matrix(R, S)
         throw(DimensionMismatch("R and S must have the same number of slices."))
     end
 
-    I_a = Matrix(I, a, a)
-    I_b = Matrix(I, b, b)
+    I_a = Matrix(I, a, a); I_b = Matrix(I, b, b)
     sylvester_blocks = [
         hcat(kron(Transpose(R[:, :, k]), I_a), kron(I_b, S[:, :, k]))
         for k in axes(R, 3)
@@ -37,18 +36,17 @@ function solve_dense_sylvester_system(R, S, T; atol=1e-6)
     rhs = rhs_vector(T)
     rows, cols = size(M)
 
-    @info "DoubleRestrictedSylvester matrix size: $(size(M))"
+    @info "Dense Sylvester matrix size: $(size(M))"
     if cols > rows
-        @warn "DoubleRestrictedSylvester has more columns than rows, so the restricted system is underconstrained."
+        @warn "Dense Sylvester matrix has more columns than rows, so the restricted system is underconstrained."
     end
 
-    particular_solution = pinv(M) * rhs
-    if !isapprox(M * particular_solution, rhs; atol=atol, rtol=atol)
-        @info "DoubleRestrictedSylvester has no solution."
-        return Vector{NTuple{2, Matrix{Float64}}}()
+    dense_solution = @timeit sylver_to "dense sylvester linear solve" lin_solve(M, rhs; atol=atol)
+    if isnothing(dense_solution)
+        @info "Dense Sylvester system has no solution."
+        return NTuple{2, Matrix{Float64}}[]
     end
-
-    nullspace_basis = @timeit sylver_to "dense sylvester linear solve" lin_solve(M; atol=atol)
+    particular_solution, sylvester_nullspace_basis = dense_solution
 
     function unpack_DR_frame_point(solution_vector)
         x_stop_ind = a * r_dim
@@ -59,7 +57,7 @@ function solve_dense_sylvester_system(R, S, T; atol=1e-6)
 
     return [
         unpack_DR_frame_point(particular_solution);
-        [unpack_DR_frame_point(particular_solution + nullspace_basis[:, i]) for i in axes(nullspace_basis, 2)]
+        [unpack_DR_frame_point(particular_solution + sylvester_nullspace_basis[:, i]) for i in axes(sylvester_nullspace_basis, 2)]
     ]
 end
 
@@ -97,11 +95,14 @@ function select_double_restriction_sizes(R, S, T)
         throw(DimensionMismatch("R, S, and T must have compatible Sylvester dimensions."))
     end
 
-    quadratic_extension_dim = max(r_dim, s_dim)
-    shared_unknown_block_size = ceil(Int, 2.0 * quadratic_extension_dim^2 / c)
+    rs_max = max(r_dim, s_dim)
+    # Let a'r and  b's both be equal to some number n - this is the goal we try to solve for
+    # where we set a' and b' in a way to equalize the number of slices.
+    # We have a'b'c = (n^2 / rs_max^2)*c and a'r + b's = 2n, so n = 2 rs_max^2 / c.
+    balanced_block_size = ceil(Int, 2.0 * rs_max^2 / c)
 
-    a_prime = min(a, max(1, ceil(Int, shared_unknown_block_size / r_dim) + 1))
-    b_prime = min(b, max(1, ceil(Int, shared_unknown_block_size / s_dim) + 1))
+    a_prime = min(a, max(1, ceil(Int, balanced_block_size / r_dim) + 1))
+    b_prime = min(b, max(1, ceil(Int, balanced_block_size / s_dim) + 1))
 
     num_equations = a_prime * b_prime * c
     num_unknowns = a_prime * r_dim + b_prime * s_dim
@@ -123,7 +124,7 @@ function solve_and_lift_sylvester_system(R, S, T; a_prime, b_prime)
     )
 
     if isempty(DR_frame)
-        return Vector{NTuple{2, Matrix{Float64}}}()
+        return NTuple{2, Matrix{Float64}}[]
     end
 
     lift_setup = begin_timed_section!(sylver_to, "restricted lift setup")

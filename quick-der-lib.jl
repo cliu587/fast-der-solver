@@ -41,7 +41,10 @@ function solve_dense_derivation_system(R, S, T)
     if cols > rows
       @warn "Derivation-system matrix has more columns than rows, so the restricted system is underconstrained."
     end
-    return @timeit to "dense derivation linear solve" lin_solve(M)
+
+    dense_solution = @timeit to "dense derivation linear solve" lin_solve(M, zeros(rows); atol=1e-6)
+    _, nullspace_basis = dense_solution
+    return nullspace_basis
 end
 
 function outer_action(T, Z)
@@ -91,12 +94,15 @@ end
 
 function select_restriction_sizes(R, S, T)
     r_dim, b, c = size(R); a, s_dim, _ = size(S); _, _, t_dim = size(T)
-    max_dim = max(r_dim, s_dim, t_dim)
-    shared_unknown_block_size = ceil(Int, sqrt(3.0 * max_dim^3))
+    rst_max = max(r_dim, s_dim, t_dim)
 
-    a_prime = min(a, ceil(Int, shared_unknown_block_size / r_dim) + 1)
-    b_prime = min(b, ceil(Int, shared_unknown_block_size / s_dim) + 1)
-    c_prime = min(c, ceil(Int, shared_unknown_block_size / t_dim) + 1)
+    # Let a'r, b's, and c't both be equal to some number n - this is the goal we try to solve for
+    # where we set a' and b', c' to be roughly equal.
+    balanced_block_size = ceil(Int, sqrt(3.0 * rst_max^3))
+
+    a_prime = min(a, ceil(Int, balanced_block_size / r_dim) + 1)
+    b_prime = min(b, ceil(Int, balanced_block_size / s_dim) + 1)
+    c_prime = min(c, ceil(Int, balanced_block_size / t_dim) + 1)
 
     num_equations = a_prime * b_prime * c_prime
     num_unknowns = a_prime * r_dim + b_prime * s_dim + c_prime * t_dim
@@ -181,10 +187,10 @@ function solve_and_lift_derivation_system(R, S, T; a_prime, b_prime, c_prime)
     if DerTR_basis_size == 0
         end_timed_section!(to, restricted_lifts)
         @info "dim DerTR = 0, so returning an empty derivation basis."
-        return Vector{NTuple{3, Matrix{Float64}}}()
+        return NTuple{3, Matrix{Float64}}[]
     end
 
-    solution_basis = Vector{NTuple{3, Matrix{Float64}}}()
+    solution_basis = NTuple{3, Matrix{Float64}}[]
     DerTR_basis_vectors = [unpack_DerTR_basis_vector(DerTR_basis[:, i]) for i in 1:DerTR_basis_size]
 
     col_rhs_directions = [N_C(Y_J, Z_K) for (_, Y_J, Z_K) in DerTR_basis_vectors]
@@ -208,7 +214,7 @@ function solve_and_lift_derivation_system(R, S, T; a_prime, b_prime, c_prime)
     return solution_basis
 end
 
-function derivation_solver(R,S,T;
+function derivation_solver(R, S, T;
     triple_restriction_size_override=nothing,
     faster_randomized_check=true)
 
