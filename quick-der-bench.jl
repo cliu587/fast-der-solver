@@ -1,6 +1,7 @@
 using Logging
 using Statistics
 include("./quick-der-lib.jl")
+include("./plotting-lib.jl")
 
 function timed_derivation_run(solve_instance, R, S, T)
     TimerOutputs.reset_timer!(to)
@@ -75,9 +76,12 @@ end
 
 # Only run benchmark if using directly.
 if abspath(PROGRAM_FILE) == @__FILE__
+    slow_solver_sizes = [5, 8, 12, 18, 25]
+    fast_solver_sizes = vcat(slow_solver_sizes, [35, 50, 70, 100])
+
     slow_results, fast_results = bench_derivation(
-        slow_solver_sizes=[5, 10, 15, 20, 23, 25],
-        fast_solver_sizes=[10, 20, 30, 50, 75, 100],
+        slow_solver_sizes=slow_solver_sizes,
+        fast_solver_sizes=fast_solver_sizes,
         # slow_solver_sizes=[5],
         # fast_solver_sizes=[10],
         n_trials=2
@@ -86,4 +90,10 @@ if abspath(PROGRAM_FILE) == @__FILE__
     print_csv_summary(slow_results)
     println("\nfast solver performance")
     print_csv_summary(fast_results)
+    plot_benchmark_results(
+        slow_results,
+        fast_results,
+        "der-results.png";
+        title="Solving a Derivation System with Regularity Conditions"
+    )
 end

@@ -1,6 +1,7 @@
 using Logging
 include("./quicksylver-lib.jl")
 using Statistics
+include("./plotting-lib.jl")
 
 function timed_sylvester_run(solve_instance, R, S, T)
     TimerOutputs.reset_timer!(sylver_to)
@@ -75,15 +76,24 @@ end
 
 # Only run benchmark if using directly.
 if abspath(PROGRAM_FILE) == @__FILE__
+    slow_sizes = [5, 8, 12, 18, 25]
+    fast_sizes = vcat(slow_sizes, [35, 50, 70, 100, 140, 200, 280, 400, 560, 700])
+
     slow_results, fast_results = bench_sylvester(
-        # slow_sizes=[5,10,15,20,23,25],
-        # fast_sizes=[10, 20, 40, 60, 80, 100, 150, 200, 250, 300, 350, 400, 500, 600, 700],
-        slow_sizes=[],
-        fast_sizes=[500],
+        slow_sizes=slow_sizes,
+        fast_sizes=fast_sizes,
+        # slow_sizes=[],
+        # fast_sizes=[500],
         n_trials=2
     )
     println("\nslow solver performance")
     print_csv_summary(slow_results)
     println("\nfast solver performance")
     print_csv_summary(fast_results)
+    plot_benchmark_results(
+        slow_results,
+        fast_results,
+        "quicksylver-results.png";
+        title="Solving a Simultaneous Sylvester System with Regularity Conditions"
+    )
 end
