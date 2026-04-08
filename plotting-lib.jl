@@ -64,8 +64,8 @@ function plot_benchmark_results(slow_results, fast_results, output_path; title)
 
     plot_figure = plot(
         title=title,
-        xlabel="log cube side length (n)",
-        ylabel="log time (seconds)",
+        xlabel="cube side length (n, log scale)",
+        ylabel="time (seconds, log scale)",
         legend=:bottomright,
         xscale=:log10,
         yscale=:log10,

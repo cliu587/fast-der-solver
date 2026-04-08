@@ -67,10 +67,24 @@ function bench_sylvester(;slow_sizes, fast_sizes, n_trials)
     return slow_results, fast_results
 end
 
-function print_csv_summary(results)
-    println("n,time")
+function print_single_csv_summary(results; io=stdout)
+    println(io, "n,time")
     for n in sort(collect(keys(results)))
-        println("$(n),$(mean(results[n]))")
+        println(io, "$(n),$(mean(results[n]))")
+    end
+end
+
+function print_csv_summary(slow_results, fast_results; io=stdout)
+    println(io, "slow solver performance")
+    print_single_csv_summary(slow_results; io=io)
+    println(io)
+    println(io, "fast solver performance")
+    print_single_csv_summary(fast_results; io=io)
+end
+
+function write_csv_summary(path, slow_results, fast_results)
+    open(path, "w") do io
+        print_csv_summary(slow_results, fast_results; io=io)
     end
 end
 
@@ -78,18 +92,19 @@ end
 if abspath(PROGRAM_FILE) == @__FILE__
     slow_sizes = [5, 8, 12, 18, 25]
     fast_sizes = vcat(slow_sizes, [35, 50, 70, 100, 140, 200, 280, 400, 560, 700])
+    slow_sizes_BIG = [5, 8, 12, 16, 20, 24, 28, 32, 36, 40, 45, 50, 55]
+    fast_sizes_BIG = vcat(slow_sizes_BIG, [70, 100, 140, 200, 280, 400, 560, 800, 1100])
 
     slow_results, fast_results = bench_sylvester(
         slow_sizes=slow_sizes,
         fast_sizes=fast_sizes,
         # slow_sizes=[],
         # fast_sizes=[500],
-        n_trials=2
+        n_trials=5
     )
-    println("\nslow solver performance")
-    print_csv_summary(slow_results)
-    println("\nfast solver performance")
-    print_csv_summary(fast_results)
+    println()
+    print_csv_summary(slow_results, fast_results)
+    write_csv_summary("quicksylver-results.csv", slow_results, fast_results)
     plot_benchmark_results(
         slow_results,
         fast_results,

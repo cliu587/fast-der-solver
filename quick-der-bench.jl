@@ -35,14 +35,14 @@ function warm_up_derivation_benchmark()
     end
 end
 
-function bench_derivation(;slow_solver_sizes, fast_solver_sizes, n_trials)
+function bench_derivation(;slow_sizes, fast_sizes, n_trials)
     warm_up_derivation_benchmark()
 
     slow_results = Dict{Int, Vector{Float64}}()
     fast_results = Dict{Int, Vector{Float64}}()
     num_with_nontrivial_solution = round(Int, n_trials / 2, RoundUp)
 
-    for size in slow_solver_sizes
+    for size in slow_sizes
         @info "slow solver for $size"
         elapsed_seconds = Float64[]
         for trial in 1:n_trials
@@ -53,7 +53,7 @@ function bench_derivation(;slow_solver_sizes, fast_solver_sizes, n_trials)
         slow_results[size] = elapsed_seconds
     end
 
-    for size in fast_solver_sizes
+    for size in fast_sizes
         @info "quick derivation solver for $size"
         elapsed_seconds = Float64[]
         for trial in 1:n_trials
@@ -67,29 +67,46 @@ function bench_derivation(;slow_solver_sizes, fast_solver_sizes, n_trials)
     return slow_results, fast_results
 end
 
-function print_csv_summary(results)
-    println("n,time")
+function print_single_csv_summary(results; io=stdout)
+    println(io, "n,time")
     for n in sort(collect(keys(results)))
-        println("$(n),$(mean(results[n]))")
+        println(io, "$(n),$(mean(results[n]))")
+    end
+end
+
+function print_csv_summary(slow_results, fast_results; io=stdout)
+    println(io, "slow solver performance")
+    print_single_csv_summary(slow_results; io=io)
+    println(io)
+    println(io, "fast solver performance")
+    print_single_csv_summary(fast_results; io=io)
+end
+
+function write_csv_summary(path, slow_results, fast_results)
+    open(path, "w") do io
+        print_csv_summary(slow_results, fast_results; io=io)
     end
 end
 
 # Only run benchmark if using directly.
 if abspath(PROGRAM_FILE) == @__FILE__
-    slow_solver_sizes = [5, 8, 12, 18, 25]
-    fast_solver_sizes = vcat(slow_solver_sizes, [35, 50, 70, 100])
+    slow_sizes = [5, 8, 12, 18, 25]
+    fast_sizes = vcat(slow_sizes, [35, 50, 70, 100])
+
+    slow_sizes_BIG = [5, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28]
+    fast_sizes_BIG = vcat(slow_sizes_BIG, [30, 40, 55, 75, 100, 130, 145])
+
 
     slow_results, fast_results = bench_derivation(
-        slow_solver_sizes=slow_solver_sizes,
-        fast_solver_sizes=fast_solver_sizes,
-        # slow_solver_sizes=[5],
-        # fast_solver_sizes=[10],
-        n_trials=2
+        slow_sizes=slow_sizes,
+        fast_sizes=fast_sizes,
+        # slow_sizes=[5],
+        # fast_sizes=[10],
+        n_trials=5
     )
-    println("\nslow solver performance")
-    print_csv_summary(slow_results)
-    println("\nfast solver performance")
-    print_csv_summary(fast_results)
+    println()
+    print_csv_summary(slow_results, fast_results)
+    write_csv_summary("der-results.csv", slow_results, fast_results)
     plot_benchmark_results(
         slow_results,
         fast_results,
