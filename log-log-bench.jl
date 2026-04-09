@@ -48,6 +48,7 @@ function collect_timings(label, sizes, build_run)
     for n in sizes
         trial_times = Float64[]
         for trial in 1:N_TRIALS
+            GC.gc()
             elapsed_seconds = @elapsed with_logger(NullLogger()) do
                 build_run(n)()
             end

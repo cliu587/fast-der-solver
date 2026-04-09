@@ -167,7 +167,7 @@ function solve_and_lift_sylvester_system(R, S, T; a_prime, b_prime)
     return solution_frame
 end
 
-function sylvester_solver(R, S, T; double_restriction_size_override=nothing, faster_randomized_check=true)
+function sylvester_solver(R, S, T; double_restriction_size_override=nothing, faster_randomized_check=false)
     if double_restriction_size_override !== nothing
         a_prime, b_prime = double_restriction_size_override
         a, b, _ = size(T)

@@ -5,6 +5,7 @@ include("./plotting-lib.jl")
 
 function timed_sylvester_run(solve_instance, R, S, T)
     TimerOutputs.reset_timer!(sylver_to)
+    GC.gc()
     elapsed_seconds = @elapsed solve_instance(R, S, T)
     @info "time: $elapsed_seconds"
     show(sylver_to)
@@ -27,10 +28,10 @@ end
 # Warms up the JIT so the first trial isn't unnecessarily slow.
 function warm_up_sylvester_benchmark()
     with_logger(NullLogger()) do
-        R, S, T = sylvester_fixture(10; has_solution=true)
+        R, S, T = sylvester_fixture(10)
         solve_dense_sylvester_system(R, S, T)
 
-        R, S, T = sylvester_fixture(10; has_solution=true)
+        R, S, T = sylvester_fixture(10)
         sylvester_solver(R, S, T)
     end
 end
@@ -57,8 +58,7 @@ function bench_sylvester(;slow_sizes, fast_sizes, n_trials)
         @info "quick Sylvester solver for n=$size"
         elapsed_seconds = Float64[]
         for trial in 1:n_trials
-            has_solution = trial <= num_with_solution
-            R, S, T = sylvester_fixture(size; has_solution=has_solution)
+            R, S, T = sylvester_fixture(size)
             push!(elapsed_seconds, timed_sylvester_run(sylvester_solver, R, S, T))
         end
         fast_results[size] = elapsed_seconds
@@ -70,7 +70,7 @@ end
 function print_single_csv_summary(results; io=stdout)
     println(io, "n,time")
     for n in sort(collect(keys(results)))
-        println(io, "$(n),$(mean(results[n]))")
+        println(io, "$(n),$(median(results[n]))")
     end
 end
 
@@ -92,8 +92,8 @@ end
 if abspath(PROGRAM_FILE) == @__FILE__
     slow_sizes = [5, 8, 12, 18, 25]
     fast_sizes = vcat(slow_sizes, [35, 50, 70, 100, 140, 200, 280, 400, 560, 700])
-    slow_sizes_BIG = [5, 8, 12, 16, 20, 24, 28, 32, 36, 40, 45, 50, 55]
-    fast_sizes_BIG = vcat(slow_sizes_BIG, [70, 100, 140, 200, 280, 400, 560, 800, 1100])
+    # slow_sizes_BIG = [5, 8, 12, 16, 20, 24, 28, 32, 34]
+    # fast_sizes_BIG = vcat(slow_sizes_BIG, [70, 100, 140, 200, 280, 400, 560, 800, 1000])
 
     slow_results, fast_results = bench_sylvester(
         slow_sizes=slow_sizes,

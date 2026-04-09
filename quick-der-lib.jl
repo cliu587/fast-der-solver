@@ -56,7 +56,7 @@ function check_derivation_solution(
     R, S, T, solution_basis;
     # If true, check one random basis vector on one random slice.
     # Otherwise, check every basis vector on every slice.
-    faster_randomized_check=true)
+    faster_randomized_check=false)
 
     if isempty(solution_basis)
         return true

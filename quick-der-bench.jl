@@ -5,6 +5,7 @@ include("./plotting-lib.jl")
 
 function timed_derivation_run(solve_instance, R, S, T)
     TimerOutputs.reset_timer!(to)
+    GC.gc()
     elapsed_seconds = @elapsed solve_instance(R, S, T)
     @info "time: $elapsed_seconds"
     show(to)
@@ -27,10 +28,10 @@ end
 
 function warm_up_derivation_benchmark()
     with_logger(NullLogger()) do
-        R, S, T = der_fixture(10; has_nontrivial_solution=true)
+        R, S, T = der_fixture(10)
         solve_dense_derivation_system(R, S, T)
 
-        R, S, T = der_fixture(10; has_nontrivial_solution=true)
+        R, S, T = der_fixture(10)
         derivation_solver(R, S, T)
     end
 end
@@ -46,8 +47,7 @@ function bench_derivation(;slow_sizes, fast_sizes, n_trials)
         @info "slow solver for $size"
         elapsed_seconds = Float64[]
         for trial in 1:n_trials
-            has_nontrivial_solution = trial <= num_with_nontrivial_solution
-            R, S, T = der_fixture(size; has_nontrivial_solution=has_nontrivial_solution)
+            R, S, T = der_fixture(size)
             push!(elapsed_seconds, timed_derivation_run(solve_dense_derivation_system, R, S, T))
         end
         slow_results[size] = elapsed_seconds
@@ -57,8 +57,7 @@ function bench_derivation(;slow_sizes, fast_sizes, n_trials)
         @info "quick derivation solver for $size"
         elapsed_seconds = Float64[]
         for trial in 1:n_trials
-            has_nontrivial_solution = trial <= num_with_nontrivial_solution
-            R, S, T = der_fixture(size; has_nontrivial_solution=has_nontrivial_solution)
+            R, S, T = der_fixture(size)
             push!(elapsed_seconds, timed_derivation_run(derivation_solver, R, S, T))
         end
         fast_results[size] = elapsed_seconds
@@ -70,7 +69,7 @@ end
 function print_single_csv_summary(results; io=stdout)
     println(io, "n,time")
     for n in sort(collect(keys(results)))
-        println(io, "$(n),$(mean(results[n]))")
+        println(io, "$(n),$(median(results[n]))")
     end
 end
 
@@ -93,8 +92,8 @@ if abspath(PROGRAM_FILE) == @__FILE__
     slow_sizes = [5, 8, 12, 18, 25]
     fast_sizes = vcat(slow_sizes, [35, 50, 70, 100])
 
-    slow_sizes_BIG = [5, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28]
-    fast_sizes_BIG = vcat(slow_sizes_BIG, [30, 40, 55, 75, 100, 130, 145])
+    slow_sizes_BIG = [5, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 33]
+    fast_sizes_BIG = vcat(slow_sizes_BIG, [30, 40, 55, 75, 100, 130, 145, 164])
 
 
     slow_results, fast_results = bench_derivation(
