@@ -41,14 +41,12 @@ function bench_sylvester(;slow_sizes, fast_sizes, n_trials)
 
     slow_results = Dict{Int, Vector{Float64}}()
     fast_results = Dict{Int, Vector{Float64}}()
-    num_with_solution = round(Int, n_trials / 2, RoundUp)
 
     for size in slow_sizes
         @info "slow solver for n=$size"
         elapsed_seconds = Float64[]
         for trial in 1:n_trials
-            has_solution = trial <= num_with_solution
-            R, S, T = sylvester_fixture(size; has_solution=has_solution)
+            R, S, T = sylvester_fixture(size)
             push!(elapsed_seconds, timed_sylvester_run(solve_dense_sylvester_system, R, S, T))
         end
         slow_results[size] = elapsed_seconds

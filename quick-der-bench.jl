@@ -41,7 +41,6 @@ function bench_derivation(;slow_sizes, fast_sizes, n_trials)
 
     slow_results = Dict{Int, Vector{Float64}}()
     fast_results = Dict{Int, Vector{Float64}}()
-    num_with_nontrivial_solution = round(Int, n_trials / 2, RoundUp)
 
     for size in slow_sizes
         @info "slow solver for $size"
