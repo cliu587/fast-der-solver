@@ -1,63 +1,63 @@
 using Logging
+include("./quicksylver-lib.jl")
 using Statistics
-include("./quick-der-lib.jl")
 include("./plotting-lib.jl")
 
-function timed_derivation_run(solve_instance, R, S, T)
-    TimerOutputs.reset_timer!(to)
+function timed_sylvester_run(solve_instance, R, S, T)
+    TimerOutputs.reset_timer!(sylver_to)
     GC.gc()
     elapsed_seconds = @elapsed solve_instance(R, S, T)
     @info "time: $elapsed_seconds"
-    show(to)
+    show(sylver_to)
     println()
     return elapsed_seconds
 end
 
-function der_fixture(n; has_nontrivial_solution=true)
-    R = randn(n, n, n)
-    S = randn(n, n, n)
-    if !has_nontrivial_solution
+function sylvester_fixture(n; has_solution=true)
+    R = randn(n, n, n); S = randn(n, n, n)
+
+    if !has_solution
         return R, S, randn(n, n, n)
     end
 
-    X = randn(n, n); Y = randn(n, n); Z = randn(n, n)
-    XR_plus_SY = stack([X * R[:, :, i] + S[:, :, i] * Y for i in 1:n])
-    T = reshape(reshape(XR_plus_SY, (n * n, n)) / Z, (n, n, n))
+    X = randn(n, n); Y = randn(n, n)
+    T = cat([X * R[:, :, k] + S[:, :, k] * Y for k in 1:n]...; dims=3)
     return R, S, T
 end
 
-function warm_up_derivation_benchmark()
+# Warms up the JIT so the first trial isn't unnecessarily slow.
+function warm_up_sylvester_benchmark()
     with_logger(NullLogger()) do
-        R, S, T = der_fixture(10)
-        solve_dense_derivation_system(R, S, T)
+        R, S, T = sylvester_fixture(10)
+        solve_dense_sylvester_system(R, S, T)
 
-        R, S, T = der_fixture(10)
-        derivation_solver(R, S, T)
+        R, S, T = sylvester_fixture(10)
+        sylvester_solver(R, S, T)
     end
 end
 
-function bench_derivation(;slow_sizes, fast_sizes, n_trials)
-    warm_up_derivation_benchmark()
+function bench_sylvester(;slow_sizes, fast_sizes, n_trials)
+    warm_up_sylvester_benchmark()
 
     slow_results = Dict{Int, Vector{Float64}}()
     fast_results = Dict{Int, Vector{Float64}}()
 
     for size in slow_sizes
-        @info "slow solver for $size"
+        @info "slow solver for n=$size"
         elapsed_seconds = Float64[]
         for trial in 1:n_trials
-            R, S, T = der_fixture(size)
-            push!(elapsed_seconds, timed_derivation_run(solve_dense_derivation_system, R, S, T))
+            R, S, T = sylvester_fixture(size)
+            push!(elapsed_seconds, timed_sylvester_run(solve_dense_sylvester_system, R, S, T))
         end
         slow_results[size] = elapsed_seconds
     end
 
     for size in fast_sizes
-        @info "quick derivation solver for $size"
+        @info "quick Sylvester solver for n=$size"
         elapsed_seconds = Float64[]
         for trial in 1:n_trials
-            R, S, T = der_fixture(size)
-            push!(elapsed_seconds, timed_derivation_run(derivation_solver, R, S, T))
+            R, S, T = sylvester_fixture(size)
+            push!(elapsed_seconds, timed_sylvester_run(sylvester_solver, R, S, T))
         end
         fast_results[size] = elapsed_seconds
     end
@@ -89,26 +89,24 @@ end
 # Only run benchmark if using directly.
 if abspath(PROGRAM_FILE) == @__FILE__
     slow_sizes = [5, 8, 12, 18, 25]
-    fast_sizes = vcat(slow_sizes, [35, 50, 70, 100])
+    fast_sizes = vcat(slow_sizes, [35, 50, 70, 100, 140, 200, 280, 400, 560, 700])
+    # slow_sizes_BIG = [5, 8, 12, 16, 20, 24, 28, 32, 34]
+    # fast_sizes_BIG = vcat(slow_sizes_BIG, [70, 100, 140, 200, 280, 400, 560, 800, 1000])
 
-    slow_sizes_BIG = [5, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 33]
-    fast_sizes_BIG = vcat(slow_sizes_BIG, [30, 40, 55, 75, 100, 130, 145, 164])
-
-
-    slow_results, fast_results = bench_derivation(
+    slow_results, fast_results = bench_sylvester(
         slow_sizes=slow_sizes,
         fast_sizes=fast_sizes,
-        # slow_sizes=[5],
-        # fast_sizes=[10],
+        # slow_sizes=[],
+        # fast_sizes=[500],
         n_trials=5
     )
     println()
     print_csv_summary(slow_results, fast_results)
-    write_csv_summary("der-results.csv", slow_results, fast_results)
+    write_csv_summary("quicksylver-results.csv", slow_results, fast_results)
     plot_benchmark_results(
         slow_results,
         fast_results,
-        "der-results.png";
-        title="Solving a Derivation System with Regularity Conditions"
+        "quicksylver-results.png";
+        title="Solving a Simultaneous Sylvester System with Regularity Conditions"
     )
 end
