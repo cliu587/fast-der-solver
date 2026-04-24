@@ -42,8 +42,7 @@ function solve_dense_derivation_system(R, S, T)
       @warn "Derivation-system matrix has more columns than rows, so the restricted system is underconstrained."
     end
 
-    dense_solution = @timeit to "dense derivation linear solve" lin_solve(M, zeros(rows); atol=1e-6)
-    _, nullspace_basis = dense_solution
+    nullspace_basis = @timeit to "dense derivation linear solve" lin_solve(M; atol=1e-6)
     return nullspace_basis
 end
 
@@ -216,7 +215,7 @@ end
 
 function derivation_solver(R, S, T;
     triple_restriction_size_override=nothing,
-    faster_randomized_check=true)
+    faster_randomized_check=false)
 
     if triple_restriction_size_override !== nothing
         a_prime, b_prime, c_prime = triple_restriction_size_override

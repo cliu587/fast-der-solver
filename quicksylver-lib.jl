@@ -61,7 +61,7 @@ function solve_dense_sylvester_system(R, S, T; atol=1e-6)
     ]
 end
 
-function check_sylvester_solution(R, S, T, solution_frame; faster_randomized_check=true)
+function check_sylvester_solution(R, S, T, solution_frame; faster_randomized_check=false)
     if isempty(solution_frame)
         return true
     end

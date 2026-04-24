@@ -1,6 +1,5 @@
 using Logging
 include("./quicksylver-lib.jl")
-using Statistics
 include("./plotting-lib.jl")
 
 function timed_sylvester_run(solve_instance, R, S, T)
@@ -66,9 +65,11 @@ function bench_sylvester(;slow_sizes, fast_sizes, n_trials)
 end
 
 function print_single_csv_summary(results; io=stdout)
-    println(io, "n,time")
+    println(io, "n,trial,time")
     for n in sort(collect(keys(results)))
-        println(io, "$(n),$(median(results[n]))")
+        for (trial, elapsed_seconds) in enumerate(results[n])
+            println(io, "$(n),$(trial),$(elapsed_seconds)")
+        end
     end
 end
 
@@ -86,18 +87,31 @@ function write_csv_summary(path, slow_results, fast_results)
     end
 end
 
+function sylvester_benchmark_sizes(mode)
+    if mode == :short
+        slow_sizes = [5, 8, 12, 18]
+        fast_sizes = vcat(slow_sizes, [25, 35, 50, 70])
+        return (; slow_sizes, fast_sizes)
+    end
+
+    if mode == :long
+        slow_sizes = [5, 8, 12, 18, 25]
+        fast_sizes = vcat(slow_sizes, [35, 50, 70, 100, 140, 200, 280, 400, 560, 700])
+        return (; slow_sizes, fast_sizes)
+    end
+
+    error("Unknown benchmark mode $mode. Use :short or :long.")
+end
+
 # Only run benchmark if using directly.
 if abspath(PROGRAM_FILE) == @__FILE__
-    slow_sizes = [5, 8, 12, 18, 25]
-    fast_sizes = vcat(slow_sizes, [35, 50, 70, 100, 140, 200, 280, 400, 560, 700])
-    # slow_sizes_BIG = [5, 8, 12, 16, 20, 24, 28, 32, 34]
-    # fast_sizes_BIG = vcat(slow_sizes_BIG, [70, 100, 140, 200, 280, 400, 560, 800, 1000])
+    # Short: does everything that long does but quickly so I can test stuff.
+    mode = isempty(ARGS) ? :short : Symbol(ARGS[1])
+    sizes = sylvester_benchmark_sizes(mode)
 
     slow_results, fast_results = bench_sylvester(
-        slow_sizes=slow_sizes,
-        fast_sizes=fast_sizes,
-        # slow_sizes=[],
-        # fast_sizes=[500],
+        slow_sizes=sizes.slow_sizes,
+        fast_sizes=sizes.fast_sizes,
         n_trials=5
     )
     println()

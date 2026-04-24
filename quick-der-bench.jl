@@ -1,5 +1,4 @@
 using Logging
-using Statistics
 include("./quick-der-lib.jl")
 include("./plotting-lib.jl")
 
@@ -36,7 +35,7 @@ function warm_up_derivation_benchmark()
     end
 end
 
-function bench_derivation(;slow_sizes, fast_sizes, n_trials)
+function bench_derivation(; slow_sizes, fast_sizes, n_trials)
     warm_up_derivation_benchmark()
 
     slow_results = Dict{Int, Vector{Float64}}()
@@ -66,45 +65,64 @@ function bench_derivation(;slow_sizes, fast_sizes, n_trials)
 end
 
 function print_single_csv_summary(results; io=stdout)
-    println(io, "n,time")
+    println(io, "n,trial,time")
     for n in sort(collect(keys(results)))
-        println(io, "$(n),$(median(results[n]))")
+        for (trial, elapsed_seconds) in enumerate(results[n])
+            println(io, "$(n),$(trial),$(elapsed_seconds)")
+        end
     end
 end
 
-function print_csv_summary(slow_results, fast_results; io=stdout)
-    println(io, "slow solver performance")
-    print_single_csv_summary(slow_results; io=io)
-    println(io)
-    println(io, "fast solver performance")
-    print_single_csv_summary(fast_results; io=io)
+function print_csv_summary(summary_pairs...; io=stdout)
+    for (i, (label, results)) in enumerate(summary_pairs)
+        i > 1 && println(io)
+        println(io, label)
+        print_single_csv_summary(results; io=io)
+    end
 end
 
-function write_csv_summary(path, slow_results, fast_results)
+function write_csv_summary(path, summary_pairs...)
     open(path, "w") do io
-        print_csv_summary(slow_results, fast_results; io=io)
+        print_csv_summary(summary_pairs...; io=io)
     end
+end
+
+function derivation_benchmark_sizes(mode)
+    if mode == :short
+        slow_sizes = [5, 8, 10, 12]
+        fast_sizes = vcat(slow_sizes, [15, 18, 25])
+        return (; slow_sizes, fast_sizes)
+    end
+
+    if mode == :long
+        slow_sizes = [5, 8, 12, 18, 25]
+        fast_sizes = vcat(slow_sizes, [35, 50, 70, 100])
+        return (; slow_sizes, fast_sizes)
+    end
+
+    error("Unknown benchmark mode $mode. Use :short or :long.")
 end
 
 # Only run benchmark if using directly.
 if abspath(PROGRAM_FILE) == @__FILE__
-    slow_sizes = [5, 8, 12, 18, 25]
-    fast_sizes = vcat(slow_sizes, [35, 50, 70, 100])
-
-    slow_sizes_BIG = [5, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 33]
-    fast_sizes_BIG = vcat(slow_sizes_BIG, [30, 40, 55, 75, 100, 130, 145, 164])
-
+    mode = isempty(ARGS) ? :short : Symbol(ARGS[1])
+    sizes = derivation_benchmark_sizes(mode)
 
     slow_results, fast_results = bench_derivation(
-        slow_sizes=slow_sizes,
-        fast_sizes=fast_sizes,
-        # slow_sizes=[5],
-        # fast_sizes=[10],
+        slow_sizes=sizes.slow_sizes,
+        fast_sizes=sizes.fast_sizes,
         n_trials=5
     )
     println()
-    print_csv_summary(slow_results, fast_results)
-    write_csv_summary("der-results.csv", slow_results, fast_results)
+    print_csv_summary(
+        ("slow solver performance", slow_results),
+        ("fast solver performance", fast_results)
+    )
+    write_csv_summary(
+        "der-results.csv",
+        ("slow solver performance", slow_results),
+        ("fast solver performance", fast_results)
+    )
     plot_benchmark_results(
         slow_results,
         fast_results,
