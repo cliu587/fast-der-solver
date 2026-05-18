@@ -4,9 +4,9 @@ gr()
 const NUM_X_TICKS = 5
 const NUM_Y_TICKS = 5
 const X_TICK_BLOCK_SIZE = 40
-const Y_TICK_BLOCK_SIZE = 4
+const Y_TICK_BLOCK_SIZE = 40
 const MIN_X_TICK_UPPER = 40
-const MIN_Y_TICK_UPPER = 12
+const MIN_Y_TICK_UPPER = 40
 const X_AXIS_PADDING = 1.08
 const Y_AXIS_PADDING = 1.12
 const MARKER_ALPHA = 0.65
@@ -99,11 +99,11 @@ function plot_benchmark_results(
         top_margin=10Plots.mm
     )
 
-    scatter!(plot_figure, slow_sizes, slow_times; label=slow_label, marker=:circle, markersize=8, color=:red, alpha=MARKER_ALPHA)
+    scatter!(plot_figure, fast_sizes, fast_times; label=fast_label, marker=:star5, markersize=12, color=:green, alpha=MARKER_ALPHA)
     if !isnothing(medium_results)
         scatter!(plot_figure, medium_sizes, medium_times; label=medium_label, marker=:diamond, markersize=8, color=:orange, alpha=MARKER_ALPHA)
     end
-    scatter!(plot_figure, fast_sizes, fast_times; label=fast_label, marker=:square, markersize=8, color=:green, alpha=MARKER_ALPHA)
+    scatter!(plot_figure, slow_sizes, slow_times; label=slow_label, marker=:circle, markersize=6, color=:red, alpha=MARKER_ALPHA)
 
     savefig(plot_figure, output_path)
     return output_path

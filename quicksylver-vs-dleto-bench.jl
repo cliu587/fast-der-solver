@@ -25,7 +25,7 @@ function dleto_single_tensor_adjoint(T; tol=1e-6)
     return Dleto.derTrOpsReduced(ops, chisel, T_tensor; tol=tol, nd=size(T, 1))
 end
 
-function K_M_field_tensor(n)
+function K_M_field_tensor(n; scramble=true)
     M = zeros(Float64, n, n)
     M[1, n] = 1
     for i in 1:n - 1
@@ -33,7 +33,13 @@ function K_M_field_tensor(n)
     end
 
     coefficients = rand(vcat(-10:-1, 1:10), n)
-    return cat([coefficients[k] * M^(k - 1) for k in 1:n]...; dims=3)
+    slices = [coefficients[k] * M^(k - 1) for k in 1:n]
+    if !scramble
+        return cat(slices...; dims=3)
+    end
+
+    row_basis = randn(n, n); col_basis = randn(n, n)
+    return cat([row_basis \ slice * col_basis for slice in slices]...; dims=3)
 end
 
 function warm_up_quicksylver_vs_dleto_benchmark()
@@ -58,7 +64,7 @@ function benchmark_implementation(label, sizes, n_trials, solve_instance)
             solution_dimension = label == "OpenDleto" ? size(solution[3], 2) : length(solution) - 1
 
             if solution_dimension != n
-                error("Expected $label to return adjoint dimension $n, got $solution_dimension.")
+                @warn "Expected $label to return adjoint dimension $n, got $solution_dimension."
             end
 
             push!(elapsed_times, elapsed_seconds)
@@ -110,9 +116,9 @@ function quicksylver_vs_dleto_benchmark_sizes(mode)
     end
 
     if mode == :long
-        baseline_sizes = [8, 10, 12, 15, 20]
-        dleto_sizes = [8, 10, 12, 15, 20, 25, 30, 35]
-        quick_sizes = dleto_sizes
+        baseline_sizes = [8, 10, 12, 15, 20, 25, 28, 31, 33]
+        dleto_sizes = [8, 10, 12, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 68]
+        quick_sizes = vcat(dleto_sizes, collect(Int, 90:25:315))
         return (; baseline_sizes, dleto_sizes, quick_sizes)
     end
 

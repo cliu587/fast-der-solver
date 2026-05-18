@@ -95,8 +95,8 @@ function derivation_benchmark_sizes(mode)
     end
 
     if mode == :long
-        slow_sizes = [5, 8, 12, 18, 25]
-        fast_sizes = vcat(slow_sizes, [35, 50, 70, 100])
+        slow_sizes = [5, 8, 12, 18, 25, 28, 30]
+        fast_sizes = vcat(slow_sizes, [35, 50, 70, 100, 120, 140])
         return (; slow_sizes, fast_sizes)
     end
 

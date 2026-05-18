@@ -95,8 +95,8 @@ function sylvester_benchmark_sizes(mode)
     end
 
     if mode == :long
-        slow_sizes = [5, 8, 12, 18, 25]
-        fast_sizes = vcat(slow_sizes, [35, 50, 70, 100, 140, 200, 280, 400, 560, 700])
+        slow_sizes = [5, 8, 12, 18, 25, 29, 31]
+        fast_sizes = vcat(slow_sizes, [35, 50, 70, 100, 140, 200, 280, 400, 560, 700, 800])
         return (; slow_sizes, fast_sizes)
     end
 
